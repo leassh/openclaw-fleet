@@ -5,7 +5,7 @@ use serde::Serialize;
 use crate::state::NodeState;
 use crate::triggers::TriggerEvent;
 
-/// Tracks situations where Leassh Pro would have taken automated action
+/// Tracks situations where Leassh would have taken automated action
 /// but the free edition can only observe and report.
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ValueGapTracker {
@@ -42,7 +42,7 @@ impl ValueGapTracker {
             "node_offline" => (
                 "service_restart".to_string(),
                 format!("{}: node went offline", event.node),
-                "Leassh Pro would fire a webhook to your alerting system and attempt automatic recovery".to_string(),
+                "Leassh would fire a webhook to your alerting system and attempt automatic recovery".to_string(),
             ),
             "disk_critically_low" => (
                 "disk_cleanup".to_string(),
@@ -51,22 +51,22 @@ impl ValueGapTracker {
                     event.node,
                     node_state.disk_free_gb.unwrap_or(0.0)
                 ),
-                "Leassh Pro would fire a webhook to your cleanup script automatically".to_string(),
+                "Leassh would fire a webhook to your cleanup script automatically".to_string(),
             ),
             "disk_filling_fast" | "disk_steady_drain" => (
                 "disk_cleanup".to_string(),
                 event.message.clone(),
-                "Leassh Pro would fire a webhook to trigger disk cleanup before it becomes critical".to_string(),
+                "Leassh would fire a webhook to trigger disk cleanup before it becomes critical".to_string(),
             ),
             "ram_exhaustion" => (
                 "process_management".to_string(),
                 format!("{}: RAM exhaustion detected", event.node),
-                "Leassh Pro would kill the heaviest non-essential process to free memory".to_string(),
+                "Leassh would kill the heaviest non-essential process to free memory".to_string(),
             ),
             "temperature_critical" => (
                 "thermal_management".to_string(),
                 event.message.clone(),
-                "Leassh Pro would throttle GPU workloads or send a Telegram alert to take immediate action".to_string(),
+                "Leassh would throttle GPU workloads or send a Telegram alert to take immediate action".to_string(),
             ),
             _ => return, // info-level triggers (login, back_online) don't generate value gap
         };
@@ -116,7 +116,7 @@ impl ValueGapTracker {
             node_name, process_name, resource, idle_minutes
         );
         let what_pro_would_do = format!(
-            "Leassh Pro would kill {} and free the resources for your workloads",
+            "Leassh would kill {} and free the resources for your workloads",
             process_name
         );
 

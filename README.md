@@ -233,40 +233,46 @@ The plugin also serves the dashboard HTML at `/fleet` and a JSON API at `/fleet/
 
 ## Want More?
 
-openclaw-fleet monitors and alerts. [Leassh](https://leassh.com) acts.
+openclaw-fleet monitors and alerts. **[Leassh](https://leassh.com/fleet)** acts.
 
-|  | openclaw-fleet (free) | Leassh Pro | Leassh Family |
-|---|---|---|---|
-| SSH monitoring | Unlimited | Yes | Yes |
-| Natural language chat | Yes | Yes | Yes |
-| Fleet dashboard | Yes | Yes | Yes |
-| Proactive alerts | Yes | Yes | Yes |
-| Trend prediction | Yes | Yes | Yes |
-| Execute commands | -- | Yes | Yes |
-| Kill processes | -- | Yes | Yes |
-| Rules & automation | -- | Yes | Yes |
-| Webhooks & MQTT | -- | Yes | Yes |
-| Screenshot analysis | -- | Yes | Yes |
-| Telegram notifications | -- | Yes | Yes |
-| Screen time tracking | -- | -- | Yes |
-| AI content safety | -- | -- | Yes |
-| Time limits & enforcement | -- | -- | Yes |
+| | openclaw-fleet | Essential | Pro | Family |
+|---|---|---|---|---|
+| **Price** | Free | $7.99/mo | $29.99/mo | $14.99/mo |
+| SSH monitoring | Unlimited | Unlimited | Unlimited | 10 nodes |
+| Chat with agent | Yes | -- | -- | -- |
+| Fleet dashboard | Yes | Yes | Yes | Yes |
+| Proactive alerts | Yes | Yes | Yes | Yes |
+| Execute commands | -- | -- | Yes | -- |
+| Rules & automation | -- | -- | Yes | -- |
+| Webhooks & MQTT | -- | -- | Yes | -- |
+| Kill processes | -- | -- | Yes | Yes |
+| Telegram alerts | -- | -- | Yes | Yes |
+| Screen time tracking | -- | -- | Yes | Yes |
+| AI screenshot analysis | -- | -- | Yes | Yes |
+| Time limits | -- | -- | Yes | Yes |
+| Weekly behavioral reports | -- | -- | Yes | Yes |
+| Self-hosting + Docker | -- | -- | Yes | -- |
+| OpenClaw integration | Yes | -- | Yes | -- |
 
-The free plugin keeps a log of situations where it could have acted but couldn't. Ask your agent "what have I missed?" for a summary:
+**Most power users want [Pro](https://leassh.com/fleet) →**
+**Parents want [Family](https://leassh.com) →**
+
+The free plugin keeps a log of situations where it could have acted but could not. Ask your agent "what have I missed?" for a summary:
 
 ```
 Agent:  This week I spotted 14 situations where I could have helped
-        with Leassh Pro:
+        with Leassh:
         - 8x: idle processes hogging GPU on shared machines
         - 3x: Ollama stopped responding on .131
         - 2x: disk space warnings on gpu-primary
         - 1x: .138 went offline for 20 minutes
 
-        That's roughly 45 minutes of manual work I could have
+        That is roughly 45 minutes of manual work I could have
         handled automatically.
 ```
 
-[leassh.com](https://leassh.com)
+[leassh.com/fleet](https://leassh.com/fleet)
+
 
 ## Configuration Reference
 

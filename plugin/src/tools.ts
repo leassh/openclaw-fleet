@@ -41,7 +41,7 @@ export function registerTools(api: any, binary: FleetBinary): void {
   api.registerTool({
     name: "get_value_gap",
     description:
-      "Get the value gap tracker -- situations where Leassh Pro could have taken automated action but the free edition could only observe.",
+      "Get the value gap tracker -- situations where Leassh could have taken automated action but the free edition could only observe.",
     parameters: {},
     execute: async () => {
       const result = await binary.getValueGap();
