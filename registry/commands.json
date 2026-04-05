@@ -1,0 +1,591 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-04T00:00:00Z",
+  "signature": null,
+  "entries": [
+    {
+      "id": "cpu_linux_procstat",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "head -1 /proc/stat",
+      "parser": {
+        "type": "multi_field",
+        "delimiter": " ",
+        "skip": 1,
+        "fields": [
+          {
+            "name": "user",
+            "index": 0
+          },
+          {
+            "name": "nice",
+            "index": 1
+          },
+          {
+            "name": "system",
+            "index": 2
+          },
+          {
+            "name": "idle",
+            "index": 3
+          },
+          {
+            "name": "iowait",
+            "index": 4
+          }
+        ],
+        "compute": "(total - idle) / total * 100"
+      },
+      "requires": [
+        "/proc/stat"
+      ],
+      "tags": [
+        "cpu_usage"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux CPU usage from /proc/stat (instant, no sampling delay)"
+    },
+    {
+      "id": "cpu_linux_top",
+      "category": "probe",
+      "os": "linux",
+      "priority": 2,
+      "command": "top -bn1 | head -5",
+      "parser": {
+        "type": "regex",
+        "pattern": "(\\d+\\.?\\d*)%?\\s+id",
+        "group": 1,
+        "transform": "100 - value"
+      },
+      "requires": [],
+      "tags": [
+        "cpu_usage"
+      ],
+      "timeout_secs": 10,
+      "description": "Linux CPU usage from top (fallback, requires sampling)"
+    },
+    {
+      "id": "cpu_macos_top",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "top -l 1 -n 0 | grep 'CPU usage'",
+      "parser": {
+        "type": "regex",
+        "pattern": "(\\d+\\.?\\d*)%\\s+idle",
+        "group": 1,
+        "transform": "100 - value"
+      },
+      "requires": [],
+      "tags": [
+        "cpu_usage"
+      ],
+      "timeout_secs": 10,
+      "description": "macOS CPU usage from top"
+    },
+    {
+      "id": "cpu_windows_cim",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"(Get-CimInstance Win32_Processor).LoadPercentage\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "cpu_usage"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows CPU usage from WMI CIM"
+    },
+    {
+      "id": "ram_linux_meminfo",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "grep -E '^(MemTotal|MemAvailable):' /proc/meminfo",
+      "parser": {
+        "type": "lua",
+        "script": "local total, avail = 0, 0 for line in output:gmatch('[^\\n]+') do local key, val = line:match('(%w+):%s+(%d+)') if key == 'MemTotal' then total = tonumber(val) elseif key == 'MemAvailable' then avail = tonumber(val) end end if total == 0 then return 0 end return (total - avail) / total * 100"
+      },
+      "requires": [
+        "/proc/meminfo"
+      ],
+      "tags": [
+        "ram_usage"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux RAM usage percentage from /proc/meminfo"
+    },
+    {
+      "id": "ram_linux_meminfo_total",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "grep -E '^MemTotal:' /proc/meminfo",
+      "parser": {
+        "type": "key_value",
+        "key": "MemTotal",
+        "delimiter": ":",
+        "transform": "value / 1024"
+      },
+      "requires": [
+        "/proc/meminfo"
+      ],
+      "tags": [
+        "ram_total"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux total RAM in MB from /proc/meminfo"
+    },
+    {
+      "id": "ram_linux_meminfo_used",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "grep -E '^(MemTotal|MemAvailable):' /proc/meminfo",
+      "parser": {
+        "type": "lua",
+        "script": "local total, avail = 0, 0 for line in output:gmatch('[^\\n]+') do local key, val = line:match('(%w+):%s+(%d+)') if key == 'MemTotal' then total = tonumber(val) elseif key == 'MemAvailable' then avail = tonumber(val) end end return (total - avail) / 1024"
+      },
+      "requires": [
+        "/proc/meminfo"
+      ],
+      "tags": [
+        "ram_used"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux used RAM in MB from /proc/meminfo"
+    },
+    {
+      "id": "ram_macos_vmstat",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "vm_stat | head -5",
+      "parser": {
+        "type": "lua",
+        "script": "local ps = 16384 local free, active, inactive, spec, wired = 0,0,0,0,0 for line in output:gmatch('[^\\n]+') do if line:match('page size of') then ps = tonumber(line:match('(%d+) bytes')) or ps end local v = tonumber(line:match(':%s+(%d+)')) if line:match('Pages free') then free = v or 0 elseif line:match('Pages active') then active = v or 0 elseif line:match('Pages inactive') then inactive = v or 0 elseif line:match('Pages speculative') then spec = v or 0 elseif line:match('Pages wired') then wired = v or 0 end end local total = (free+active+inactive+spec+wired)*ps/1048576 local used = (active+wired)*ps/1048576 if total == 0 then return 0 end return used/total*100"
+      },
+      "requires": [],
+      "tags": [
+        "ram_usage"
+      ],
+      "timeout_secs": 5,
+      "description": "macOS RAM usage from vm_stat"
+    },
+    {
+      "id": "ram_windows_cim",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"$os=Get-CimInstance Win32_OperatingSystem; \\\"$($os.TotalVisibleMemorySize) $($os.FreePhysicalMemory)\\\"\"",
+      "parser": {
+        "type": "lua",
+        "script": "local parts = {} for w in output:gmatch('%S+') do parts[#parts+1] = tonumber(w) end if #parts < 2 or parts[1] == 0 then return 0 end return (parts[1] - parts[2]) / parts[1] * 100"
+      },
+      "requires": [],
+      "tags": [
+        "ram_usage"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows RAM usage from WMI CIM"
+    },
+    {
+      "id": "ram_windows_cim_total",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"$os=Get-CimInstance Win32_OperatingSystem; \\\"$($os.TotalVisibleMemorySize) $($os.FreePhysicalMemory)\\\"\"",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 0,
+        "transform": "value / 1024"
+      },
+      "requires": [],
+      "tags": [
+        "ram_total"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows total RAM in MB from WMI"
+    },
+    {
+      "id": "ram_windows_cim_used",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"$os=Get-CimInstance Win32_OperatingSystem; \\\"$($os.TotalVisibleMemorySize) $($os.FreePhysicalMemory)\\\"\"",
+      "parser": {
+        "type": "lua",
+        "script": "local parts = {} for w in output:gmatch('%S+') do parts[#parts+1] = tonumber(w) end if #parts < 2 then return 0 end return (parts[1] - parts[2]) / 1024"
+      },
+      "requires": [],
+      "tags": [
+        "ram_used"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows used RAM in MB from WMI"
+    },
+    {
+      "id": "disk_linux_df",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "df -BG / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 3,
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "disk_free"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux free disk space in GB from df"
+    },
+    {
+      "id": "disk_macos_df",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "df -g / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 3,
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "disk_free"
+      ],
+      "timeout_secs": 5,
+      "description": "macOS free disk space in GB from df"
+    },
+    {
+      "id": "disk_windows_cim",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\" | ForEach-Object { [math]::Round($_.FreeSpace/1GB) }\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "disk_free"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows free disk space in GB from WMI"
+    },
+    {
+      "id": "gpu_util_nvidia",
+      "category": "probe",
+      "os": "*",
+      "priority": 1,
+      "command": "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [
+        "nvidia-smi"
+      ],
+      "tags": [
+        "gpu_util"
+      ],
+      "timeout_secs": 5,
+      "description": "NVIDIA GPU utilization via nvidia-smi"
+    },
+    {
+      "id": "gpu_vram_nvidia",
+      "category": "probe",
+      "os": "*",
+      "priority": 1,
+      "command": "nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits 2>/dev/null",
+      "parser": {
+        "type": "lua",
+        "script": "local parts = {} for w in output:gmatch('[^,]+') do parts[#parts+1] = tonumber(w:match('%d+')) end if #parts < 2 or parts[2] == 0 then return 0 end return parts[1] / parts[2] * 100"
+      },
+      "requires": [
+        "nvidia-smi"
+      ],
+      "tags": [
+        "gpu_vram"
+      ],
+      "timeout_secs": 5,
+      "description": "NVIDIA VRAM usage percentage via nvidia-smi"
+    },
+    {
+      "id": "gpu_vram_nvidia_used",
+      "category": "probe",
+      "os": "*",
+      "priority": 1,
+      "command": "nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits 2>/dev/null",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [
+        "nvidia-smi"
+      ],
+      "tags": [
+        "gpu_vram_used"
+      ],
+      "timeout_secs": 5,
+      "description": "NVIDIA VRAM used in MB"
+    },
+    {
+      "id": "gpu_vram_nvidia_total",
+      "category": "probe",
+      "os": "*",
+      "priority": 1,
+      "command": "nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [
+        "nvidia-smi"
+      ],
+      "tags": [
+        "gpu_vram_total"
+      ],
+      "timeout_secs": 5,
+      "description": "NVIDIA VRAM total in MB"
+    },
+    {
+      "id": "gpu_temp_nvidia",
+      "category": "probe",
+      "os": "*",
+      "priority": 1,
+      "command": "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits 2>/dev/null",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [
+        "nvidia-smi"
+      ],
+      "tags": [
+        "gpu_temp"
+      ],
+      "timeout_secs": 5,
+      "description": "NVIDIA GPU temperature in Celsius"
+    },
+    {
+      "id": "idle_windows_getlastinput",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public struct LASTINPUTINFO { public uint cbSize; public uint dwTime; } public class IdleCheck { [DllImport(\\\"user32.dll\\\")] public static extern bool GetLastInputInfo(ref LASTINPUTINFO lii); public static uint GetIdleSecs() { var lii = new LASTINPUTINFO(); lii.cbSize = (uint)Marshal.SizeOf(lii); GetLastInputInfo(ref lii); return (uint)(Environment.TickCount - lii.dwTime) / 1000; } }'; [IdleCheck]::GetIdleSecs()\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "idle_time"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows idle time via GetLastInputInfo P/Invoke"
+    },
+    {
+      "id": "idle_macos_ioreg",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF; exit}'",
+      "parser": {
+        "type": "lua",
+        "script": "local ns = tonumber(output:match('(%d+)')) if ns then return ns / 1000000000 else return 0 end"
+      },
+      "requires": [],
+      "tags": [
+        "idle_time"
+      ],
+      "timeout_secs": 5,
+      "description": "macOS idle time from IOKit HIDIdleTime (nanoseconds to seconds)"
+    },
+    {
+      "id": "idle_linux_xprintidle",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "xprintidle 2>/dev/null",
+      "parser": {
+        "type": "identity",
+        "transform": "value / 1000"
+      },
+      "requires": [
+        "xprintidle"
+      ],
+      "tags": [
+        "idle_time"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux idle time via xprintidle (ms to seconds)"
+    },
+    {
+      "id": "idle_linux_procuptime",
+      "category": "probe",
+      "os": "linux",
+      "priority": 2,
+      "command": "cat /proc/uptime",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 0,
+        "transform": null
+      },
+      "requires": [
+        "/proc/uptime"
+      ],
+      "tags": [
+        "idle_time"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux system uptime as idle proxy (headless servers)"
+    },
+    {
+      "id": "idle_linux_inputdev",
+      "category": "probe",
+      "os": "linux",
+      "priority": 3,
+      "command": "stat -c %Y /dev/input/mice 2>/dev/null",
+      "parser": {
+        "type": "lua",
+        "script": "local mtime = tonumber(output:match('(%d+)')) if mtime then return os.time() - mtime else return 0 end"
+      },
+      "requires": [
+        "/dev/input/mice"
+      ],
+      "tags": [
+        "idle_time"
+      ],
+      "timeout_secs": 5,
+      "description": "Linux idle time from input device modification time"
+    },
+    {
+      "id": "users_unix_who",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "who",
+      "parser": {
+        "type": "lines",
+        "line_filter": null,
+        "extractor": {
+          "type": "regex",
+          "pattern": "^(\\S+)",
+          "group": 1,
+          "transform": null
+        }
+      },
+      "requires": [],
+      "tags": [
+        "logged_in"
+      ],
+      "timeout_secs": 5,
+      "description": "Unix logged-in users from who"
+    },
+    {
+      "id": "users_macos_who",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "who",
+      "parser": {
+        "type": "lines",
+        "line_filter": null,
+        "extractor": {
+          "type": "regex",
+          "pattern": "^(\\S+)",
+          "group": 1,
+          "transform": null
+        }
+      },
+      "requires": [],
+      "tags": [
+        "logged_in"
+      ],
+      "timeout_secs": 5,
+      "description": "macOS logged-in users from who"
+    },
+    {
+      "id": "users_windows_query",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "query user",
+      "parser": {
+        "type": "lua",
+        "script": "local users = {} local first = true for line in output:gmatch('[^\\n]+') do if first then first = false else local user = line:match('^>?(%S+)') if user then users[#users+1] = user end end end return table.concat(users, '\\n')"
+      },
+      "requires": [],
+      "tags": [
+        "logged_in"
+      ],
+      "timeout_secs": 10,
+      "description": "Windows logged-in users from query user"
+    },
+    {
+      "id": "procs_linux_ps",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "ps aux --no-headers",
+      "parser": {
+        "type": "lua",
+        "script": "local procs = {} for line in output:gmatch('[^\\n]+') do local parts = {} for w in line:gmatch('%S+') do parts[#parts+1] = w end if #parts >= 11 then local pid = parts[2] local cpu = parts[3] local mem = tonumber(parts[6]) or 0 local name = table.concat(parts, ' ', 11) procs[#procs+1] = pid..' '..cpu..' '..string.format('%.1f', mem/1024)..' '..name end end table.sort(procs, function(a,b) local ac = tonumber(a:match('^%S+ (%S+)')) or 0 local bc = tonumber(b:match('^%S+ (%S+)')) or 0 return ac > bc end) local result = {} for i=1, math.min(20, #procs) do result[#result+1] = procs[i] end return table.concat(result, '\\n')"
+      },
+      "requires": [],
+      "tags": [
+        "processes"
+      ],
+      "timeout_secs": 10,
+      "description": "Linux process list from ps aux"
+    },
+    {
+      "id": "procs_macos_ps",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "ps aux -r",
+      "parser": {
+        "type": "lua",
+        "script": "local procs = {} local first = true for line in output:gmatch('[^\\n]+') do if first then first = false else local parts = {} for w in line:gmatch('%S+') do parts[#parts+1] = w end if #parts >= 11 then local pid = parts[2] local cpu = parts[3] local mem = tonumber(parts[6]) or 0 local name = table.concat(parts, ' ', 11) procs[#procs+1] = pid..' '..cpu..' '..string.format('%.1f', mem/1024)..' '..name end end end local result = {} for i=1, math.min(20, #procs) do result[#result+1] = procs[i] end return table.concat(result, '\\n')"
+      },
+      "requires": [],
+      "tags": [
+        "processes"
+      ],
+      "timeout_secs": 10,
+      "description": "macOS process list from ps aux -r"
+    },
+    {
+      "id": "procs_windows_getprocess",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-Process | Sort-Object CPU -Descending | Select-Object -First 20 | ForEach-Object { \\\"$($_.Id) $([math]::Round($_.CPU,1)) $([math]::Round($_.WorkingSet64/1MB,1)) $($_.ProcessName)\\\" }\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": [
+        "processes"
+      ],
+      "timeout_secs": 15,
+      "description": "Windows process list from Get-Process"
+    }
+  ]
+}
