@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-fleet",
+  "version": "1.0.0",
+  "description": "Talk to your infrastructure. SSH-based fleet monitoring for OpenClaw.",
+  "entrypoint": "dist/index.js",
+  "skills": ["skills/"],
+  "config": {
+    "type": "object",
+    "properties": {
+      "configPath": {
+        "type": "string",
+        "description": "Path to fleet.yaml configuration file"
+      }
+    }
+  }
+}

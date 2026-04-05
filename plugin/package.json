@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-fleet",
+  "version": "1.0.0",
+  "description": "Talk to your infrastructure. SSH-based fleet monitoring for OpenClaw.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4",
+    "@types/node": "^22"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

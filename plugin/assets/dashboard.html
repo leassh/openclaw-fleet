@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openclaw-fleet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #1a1814;
+    --bg-raised:  #221f1a;
+    --bg-hover:   #2a2620;
+    --border:     #352f27;
+    --border-lit: #4a4235;
+
+    --text:       #e8e0d4;
+    --text-mid:   #b5a998;
+    --text-dim:   #7a6f62;
+
+    --amber:      #d4a24c;
+    --amber-dim:  #8a6a2e;
+    --green:      #6abf69;
+    --green-dim:  #2d5a2c;
+    --red:        #d45b4c;
+    --red-dim:    #6b2820;
+    --yellow:     #c9a83e;
+    --yellow-dim: #5e4f1c;
+    --blue:       #5b9bd4;
+
+    --font-display: 'Bricolage Grotesque', Georgia, serif;
+    --font-body: 'Instrument Sans', system-ui, sans-serif;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Atmospheric background ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(212, 162, 76, 0.04), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(106, 191, 105, 0.02), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 32px 64px;
+  }
+
+  /* ─── Header ─── */
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+
+  .brand {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--amber);
+  }
+
+  .brand-tag {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+    padding-left: 4px;
+  }
+
+  .pulse-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  .pulse-dot.error { background: var(--red); animation: none; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* ─── Fleet summary bar ─── */
+  .summary {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .summary-val {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .summary-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .summary-val.online { color: var(--green); }
+  .summary-val.total { color: var(--text-mid); }
+  .summary-val.busy { color: var(--red); }
+
+  /* ─── Node list ─── */
+  .fleet {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 48px;
+  }
+
+  /* ─── Node row ─── */
+  .node {
+    display: grid;
+    grid-template-columns: 10px 1fr;
+    gap: 0;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s var(--ease-out);
+    animation: slideIn 0.5s var(--ease-out) both;
+  }
+
+  .node:hover { background: var(--bg-hover); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .node:nth-child(1) { animation-delay: 0.05s; }
+  .node:nth-child(2) { animation-delay: 0.1s; }
+  .node:nth-child(3) { animation-delay: 0.15s; }
+  .node:nth-child(4) { animation-delay: 0.2s; }
+  .node:nth-child(5) { animation-delay: 0.25s; }
+  .node:nth-child(6) { animation-delay: 0.3s; }
+
+  /* Status indicator — vertical bar on the left */
+  .node-indicator {
+    width: 3px;
+    border-radius: 3px;
+    margin: 8px 0;
+    transition: background 0.3s var(--ease-out);
+  }
+
+  .node-indicator.online { background: var(--green); }
+  .node-indicator.away { background: var(--yellow); }
+  .node-indicator.offline { background: var(--red); opacity: 0.5; }
+
+  .node-body {
+    padding: 14px 16px 14px 12px;
+  }
+
+  /* Top line: name, badges, host */
+  .node-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .node-name {
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.2px;
+  }
+
+  .node-badges {
+    display: flex;
+    gap: 5px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  .tag.active  { background: rgba(106, 191, 105, 0.12); color: var(--green); }
+  .tag.idle    { background: rgba(91, 155, 212, 0.12);  color: var(--blue); }
+  .tag.away    { background: rgba(201, 168, 62, 0.12);  color: var(--yellow); }
+  .tag.offline { background: rgba(212, 91, 76, 0.1);    color: var(--red); }
+
+  .node-host {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Leash bar — the signature visual */
+  .leash-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .leash-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s var(--ease-out), background 0.5s;
+    min-width: 2px;
+  }
+
+  .leash-fill.none   { background: var(--border-lit); }
+  .leash-fill.low    { background: var(--green-dim); }
+  .leash-fill.medium { background: var(--yellow); }
+  .leash-fill.high   { background: var(--red); }
+  .leash-fill.offline { background: var(--red-dim); width: 0 !important; }
+
+  /* Metrics row */
+  .node-metrics {
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--text-mid);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+  }
+
+  .metric-label {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+
+  .metric-val {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .metric-val.warn { color: var(--yellow); }
+  .metric-val.crit { color: var(--red); }
+  .metric-val.na { color: var(--text-dim); font-weight: 400; }
+
+  /* Info line */
+  .node-info {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  .node-info .sep { padding: 0 6px; opacity: 0.4; }
+
+  /* ─── Expandable detail ─── */
+  .node-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s var(--ease-out);
+  }
+
+  .node.expanded .node-detail {
+    grid-template-rows: 1fr;
+  }
+
+  .detail-inner {
+    overflow: hidden;
+  }
+
+  .detail-content {
+    padding: 12px 0 8px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .proc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .proc-table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 12px 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .proc-table td {
+    padding: 4px 12px 4px 0;
+    color: var(--text-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+  }
+
+  .proc-table tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.01);
+  }
+
+  /* ─── Event log ─── */
+  .events-section {
+    margin-top: 8px;
+  }
+
+  .events-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .events-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .event-row {
+    display: flex;
+    gap: 12px;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(53, 47, 39, 0.5);
+    animation: fadeIn 0.3s var(--ease-out) both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .event-time {
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    width: 60px;
+  }
+
+  .event-sev {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 6px;
+  }
+
+  .event-sev.critical { background: var(--red); }
+  .event-sev.warning { background: var(--yellow); }
+  .event-sev.info { background: var(--text-dim); }
+
+  .event-msg {
+    color: var(--text-mid);
+  }
+
+  .event-node {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ─── Empty / loading ─── */
+  .empty {
+    text-align: center;
+    padding: 80px 0;
+    color: var(--text-dim);
+  }
+
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--text-mid);
+    margin-bottom: 8px;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 640px) {
+    .shell { padding: 24px 16px 48px; }
+    .brand { font-size: 22px; }
+    .summary { gap: 20px; }
+    .summary-val { font-size: 22px; }
+    .node-metrics { gap: 12px; flex-wrap: wrap; }
+    .node-host { display: none; }
+    .masthead { margin-bottom: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <span class="brand">openclaw-fleet</span>
+    <span class="brand-tag" id="tagline">fleet</span>
+    <div class="pulse-status" id="pulse">
+      <div class="pulse-dot" id="pulse-dot"></div>
+      <span id="pulse-text">connecting</span>
+    </div>
+  </header>
+
+  <div class="summary" id="summary">
+    <div class="summary-item">
+      <span class="summary-val total" id="s-total">-</span>
+      <span class="summary-label">nodes</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-val online" id="s-online">-</span>
+      <span class="summary-label">online</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-val busy" id="s-busy">-</span>
+      <span class="summary-label">busy</span>
+    </div>
+  </div>
+
+  <div class="fleet" id="fleet">
+    <div class="empty">
+      <div class="empty-title">Waiting for fleet data</div>
+      <div>The binary is probing your nodes...</div>
+    </div>
+  </div>
+
+  <section class="events-section">
+    <div class="events-header">Recent Events</div>
+    <div class="events-list" id="events">
+      <div class="event-row">
+        <span class="event-time">--:--</span>
+        <span class="event-sev info"></span>
+        <span class="event-msg">Waiting for events</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function() {
+  const fleet = document.getElementById('fleet');
+  const events = document.getElementById('events');
+  let data = null;
+  let expanded = new Set();
+  let eventLog = [];
+
+  function esc(s) {
+    if (s == null) return '';
+    const d = document.createElement('span');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function actClass(a) {
+    const s = (a || '').toLowerCase();
+    if (s === 'active') return 'active';
+    if (s === 'idle') return 'idle';
+    if (s === 'away') return 'away';
+    return 'offline';
+  }
+
+  function indicatorClass(a) {
+    const s = (a || '').toLowerCase();
+    if (s === 'offline') return 'offline';
+    if (s === 'away') return 'away';
+    return 'online';
+  }
+
+  function leashClass(load) {
+    const s = (load || '').toLowerCase();
+    if (s === 'high') return 'high';
+    if (s === 'medium') return 'medium';
+    if (s === 'low') return 'low';
+    if (s === 'none') return 'none';
+    return 'offline';
+  }
+
+  function leashWidth(n) {
+    // Composite load: max of CPU and GPU, scaled to %
+    const cpu = n.cpu_percent || 0;
+    const gpu = n.gpu_percent || 0;
+    const load = Math.max(cpu, gpu);
+    return Math.max(2, Math.min(100, load)) + '%';
+  }
+
+  function metricColor(val, warnAt, critAt) {
+    if (val == null) return 'na';
+    if (critAt != null && val >= critAt) return 'crit';
+    if (warnAt != null && val >= warnAt) return 'warn';
+    return '';
+  }
+
+  function fmtIdle(secs) {
+    if (secs == null) return null;
+    const m = Math.floor(secs / 60);
+    if (m < 60) return m + 'm';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h ' + (m % 60) + 'm';
+    return Math.floor(h / 24) + 'd';
+  }
+
+  function renderNode(n) {
+    const act = n.activity || 'Offline';
+    const load = n.load || 'Unknown';
+    const isExpanded = expanded.has(n.name);
+    const idle = fmtIdle(n.idle_seconds);
+    const users = (n.logged_in_users || []).filter((v, i, a) => a.indexOf(v) === i);
+
+    let metricsHtml = '';
+    const addMetric = (label, val, unit, warn, crit) => {
+      if (val == null) { metricsHtml += `<div class="metric"><span class="metric-label">${label}</span><span class="metric-val na">--</span></div>`; return; }
+      const cls = metricColor(val, warn, crit);
+      const display = typeof val === 'number' ? (Number.isInteger(val) ? val : val.toFixed(0)) : val;
+      metricsHtml += `<div class="metric"><span class="metric-label">${label}</span><span class="metric-val ${cls}">${esc(display)}${unit || ''}</span></div>`;
+    };
+
+    addMetric('gpu', n.gpu_percent, '%', 70, 90);
+    addMetric('cpu', n.cpu_percent != null ? Math.round(n.cpu_percent) : null, '%', 70, 90);
+    if (n.ram_used_mb != null && n.ram_total_mb != null) {
+      const ramPct = Math.round((n.ram_used_mb / n.ram_total_mb) * 100);
+      addMetric('ram', ramPct, '%', 80, 95);
+    } else { addMetric('ram', null); }
+    addMetric('disk', n.disk_free_gb != null ? Math.round(n.disk_free_gb) + 'GB' : null, '', null, null);
+
+    let infoItems = [];
+    if (n.gpu_name) infoItems.push(esc(n.gpu_name));
+    if (idle) infoItems.push('idle ' + idle);
+    if (users.length) infoItems.push('users: ' + esc(users.join(', ')));
+    if (n.custom_states && n.custom_states.length) infoItems.push(n.custom_states.map(s => esc(s)).join(', '));
+
+    let procsHtml = '';
+    const procs = n.top_processes || [];
+    if (procs.length > 0) {
+      procsHtml = '<table class="proc-table"><tr><th>Process</th><th>PID</th><th>CPU%</th><th>Memory</th></tr>';
+      for (const p of procs.slice(0, 12)) {
+        procsHtml += `<tr><td>${esc(p.name)}</td><td>${p.pid}</td><td>${p.cpu_percent != null ? p.cpu_percent.toFixed(1) : '--'}</td><td>${p.memory_mb != null ? Math.round(p.memory_mb) + 'MB' : '--'}</td></tr>`;
+      }
+      procsHtml += '</table>';
+    } else {
+      procsHtml = '<div style="color:var(--text-dim);padding:8px 0">No process data available</div>';
+    }
+
+    return `<div class="node ${isExpanded ? 'expanded' : ''}" data-name="${esc(n.name)}" onclick="window._toggle('${esc(n.name)}')">
+      <div class="node-indicator ${indicatorClass(act)}"></div>
+      <div class="node-body">
+        <div class="node-top">
+          <span class="node-name">${esc(n.name)}</span>
+          <div class="node-badges">
+            <span class="tag ${actClass(act)}">${esc(act.toLowerCase())}</span>
+          </div>
+          <span class="node-host">${esc(n.host)}</span>
+        </div>
+        <div class="leash-track">
+          <div class="leash-fill ${leashClass(load)}" style="width:${act.toLowerCase() === 'offline' ? '0' : leashWidth(n)}"></div>
+        </div>
+        <div class="node-metrics">${metricsHtml}</div>
+        ${infoItems.length ? `<div class="node-info">${infoItems.join('<span class="sep">/</span>')}</div>` : ''}
+        <div class="node-detail"><div class="detail-inner"><div class="detail-content">${procsHtml}</div></div></div>
+      </div>
+    </div>`;
+  }
+
+  window._toggle = function(name) {
+    if (expanded.has(name)) expanded.delete(name); else expanded.add(name);
+    render();
+  };
+
+  function addEvent(severity, node, message) {
+    const now = new Date();
+    const ts = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    eventLog.unshift({ ts, severity, node, message });
+    if (eventLog.length > 20) eventLog.length = 20;
+  }
+
+  function renderEvents() {
+    if (eventLog.length === 0) return;
+    events.innerHTML = eventLog.map(e =>
+      `<div class="event-row">
+        <span class="event-time">${esc(e.ts)}</span>
+        <span class="event-sev ${e.severity}"></span>
+        <span class="event-msg"><span class="event-node">${esc(e.node)}</span> ${esc(e.message)}</span>
+      </div>`
+    ).join('');
+  }
+
+  function render() {
+    if (!data || !data.nodes) return;
+    const nodes = data.nodes;
+
+    // Summary
+    const online = nodes.filter(n => (n.activity || '').toLowerCase() !== 'offline').length;
+    const busy = nodes.filter(n => {
+      const l = (n.load || '').toLowerCase();
+      return l === 'high' || l === 'medium';
+    }).length;
+
+    document.getElementById('s-total').textContent = nodes.length;
+    document.getElementById('s-online').textContent = online;
+    document.getElementById('s-busy').textContent = busy;
+
+    // Nodes
+    fleet.innerHTML = nodes.map(renderNode).join('');
+
+    // Events
+    renderEvents();
+  }
+
+  let prevStates = {};
+
+  async function refresh() {
+    try {
+      const resp = await fetch('/fleet/api/status');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const json = await resp.json();
+
+      // Detect state changes for event log
+      if (data && json.nodes) {
+        for (const n of json.nodes) {
+          const prev = prevStates[n.name];
+          if (prev) {
+            if (prev.activity !== n.activity) {
+              addEvent('info', n.name, `${prev.activity} → ${n.activity}`);
+            }
+            if (prev.load !== n.load && n.load !== 'Unknown') {
+              addEvent('info', n.name, `load: ${n.load}`);
+            }
+          }
+          prevStates[n.name] = { activity: n.activity, load: n.load };
+        }
+      } else if (json.nodes) {
+        for (const n of json.nodes) {
+          prevStates[n.name] = { activity: n.activity, load: n.load };
+        }
+        addEvent('info', 'fleet', 'Fleet data received');
+      }
+
+      data = json;
+      render();
+
+      document.getElementById('pulse-dot').className = 'pulse-dot';
+      document.getElementById('pulse-text').textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+      document.getElementById('pulse-dot').className = 'pulse-dot error';
+      document.getElementById('pulse-text').textContent = 'disconnected';
+      if (data) render(); // keep last data
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 5000);
+})();
+</script>
+</body>
+</html>
