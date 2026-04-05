@@ -1,6 +1,6 @@
 # openclaw-fleet
 
-> Talk to your infrastructure. SSH-based fleet monitoring for OpenClaw.
+> Talk to your infrastructure. Fleet monitoring for OpenClaw -- via SSH or lightweight agents.
 
 Ask your AI agent about your machines -- and get real-time answers.
 
@@ -20,13 +20,26 @@ Agent:  All 6 nodes online.
         Nobody's touched the keyboard in 47 minutes.
 ```
 
-Zero software installed on monitored machines. If SSH works, this works.
+## Two Ways to Connect
+
+### Option A: SSH (zero install on targets)
+Add machines to `fleet.yaml` with their SSH details. Leassh probes them
+directly. Nothing installed on the monitored machines.
+
+### Option B: Install the Agent (easiest setup)
+Install the lightweight Leassh agent on each machine. It connects to your
+server automatically using a pairing code. No SSH configuration needed.
+Works through firewalls and NAT.
+
+Both options give you the same monitoring data. SSH is ideal for servers
+and machines you can't install software on. The agent is ideal for
+desktops, laptops, and remote machines.
 
 ---
 
 ## What It Does
 
-openclaw-fleet is an OpenClaw plugin that connects to your machines over SSH and collects system metrics: CPU, GPU, RAM, disk, running processes, idle time, logged-in users, and temperature. Your AI agent can then answer questions about your infrastructure in natural language, alert you proactively when something goes wrong, and detect trends before they become problems.
+openclaw-fleet is an OpenClaw plugin that connects to your machines over SSH -- or via lightweight agents -- and collects system metrics: CPU, GPU, RAM, disk, running processes, idle time, logged-in users, and temperature. Your AI agent can then answer questions about your infrastructure in natural language, alert you proactively when something goes wrong, and detect trends before they become problems.
 
 The Rust binary handles SSH connections and metric collection. The TypeScript plugin exposes tools to the OpenClaw agent and serves a live dashboard. Communication between the two happens over JSON-RPC on stdin/stdout.
 
@@ -38,7 +51,7 @@ The Rust binary handles SSH connections and metric collection. The TypeScript pl
 - **Trend detection** -- Linear regression over rolling metric windows; predicts when disk will fill, temperatures will overheat
 - **Live dashboard** -- Dark-themed single-page fleet view at `/fleet` with auto-refresh, leash tension bars, expandable process lists
 - **Cross-platform** -- Linux, macOS, Windows targets from a single binary
-- **Zero agent install** -- Nothing runs on monitored machines; SSH key auth is all you need
+- **Flexible connection** -- SSH probing (zero install) or lightweight agent (easiest setup)
 - **Configurable thresholds** -- Probe intervals, load classifications, idle timeouts, all in YAML
 
 ## Quick Start
@@ -50,6 +63,8 @@ openclaw plugins install openclaw-fleet
 Create `fleet.yaml` in your OpenClaw workspace:
 
 ```yaml
+# Agent-connected nodes appear automatically when they pair
+# You can also add SSH-probed nodes manually:
 nodes:
   - name: gpu-server
     host: 192.168.1.131
@@ -308,6 +323,16 @@ load_thresholds:
 openclaw-fleet looks for keys in `~/.ssh/` in this order: `id_ed25519`, `id_rsa`, `id_ecdsa`. Password auth is not supported -- use key-based auth.
 
 For Windows targets, enable OpenSSH Server in Windows Settings > Apps > Optional Features, then copy your public key to `C:\Users\<user>\.ssh\authorized_keys`.
+
+## FAQ
+
+**Do I need to install software on the computers I'm monitoring?**
+
+You have two options. The recommended approach is to install the tiny Leassh agent (under 10MB) -- just enter a pairing code and it connects automatically. Alternatively, power users can use SSH probing which requires no software on target machines but needs SSH access configured. Both give you the same monitoring data.
+
+**Can I deploy the agent remotely via SSH?**
+
+Yes. If you already have SSH access, you can install the agent without physically touching the machine. Run the install script via SSH with your pairing code. On macOS, the Screen Recording permission still needs one-time physical approval -- everything else works immediately.
 
 ## Contributing
 
