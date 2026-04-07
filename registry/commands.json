@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-04-04T00:00:00Z",
+  "updated_at": "2026-04-07T00:00:00Z",
   "signature": null,
   "entries": [
     {
@@ -284,6 +284,241 @@
       ],
       "timeout_secs": 10,
       "description": "Windows free disk space in GB from WMI"
+    },
+    {
+      "id": "disk_linux_df_total",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "df -BG / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 1,
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["disk_total"],
+      "timeout_secs": 5,
+      "description": "Linux total disk space in GB from df"
+    },
+    {
+      "id": "disk_linux_df_pct",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "df -BG / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 4,
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["disk_usage"],
+      "timeout_secs": 5,
+      "description": "Linux disk usage percentage from df"
+    },
+    {
+      "id": "disk_macos_df_total",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "df -g / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 1,
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["disk_total"],
+      "timeout_secs": 5,
+      "description": "macOS total disk space in GB from df"
+    },
+    {
+      "id": "disk_macos_df_pct",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "df -g / | tail -1",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 4,
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["disk_usage"],
+      "timeout_secs": 5,
+      "description": "macOS disk usage percentage from df"
+    },
+    {
+      "id": "disk_windows_cim_total_gb",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\" | ForEach-Object { [math]::Round($_.Size/1GB) }\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["disk_total"],
+      "timeout_secs": 10,
+      "description": "Windows total disk space in GB from WMI"
+    },
+    {
+      "id": "disk_windows_cim_pct",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-CimInstance Win32_LogicalDisk -Filter \\\"DeviceID='C:'\\\" | ForEach-Object { \\\"$($_.Size) $($_.FreeSpace)\\\" }\"",
+      "parser": {
+        "type": "lua",
+        "script": "local parts = {} for w in output:gmatch('%S+') do parts[#parts+1] = tonumber(w) end if #parts < 2 or parts[1] == 0 then return 0 end return (parts[1] - parts[2]) / parts[1] * 100"
+      },
+      "requires": [],
+      "tags": ["disk_usage"],
+      "timeout_secs": 10,
+      "description": "Windows disk usage percentage from WMI"
+    },
+    {
+      "id": "uptime_linux_proc",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "cat /proc/uptime",
+      "parser": {
+        "type": "split",
+        "delimiter": " ",
+        "index": 0,
+        "transform": null
+      },
+      "requires": ["/proc/uptime"],
+      "tags": ["uptime"],
+      "timeout_secs": 5,
+      "description": "Linux system uptime in seconds from /proc/uptime"
+    },
+    {
+      "id": "uptime_macos_sysctl",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "sysctl -n kern.boottime",
+      "parser": {
+        "type": "lua",
+        "script": "local sec = tonumber(output:match('sec = (%d+)')) if sec then return os.time() - sec else return 0 end"
+      },
+      "requires": [],
+      "tags": ["uptime"],
+      "timeout_secs": 5,
+      "description": "macOS system uptime in seconds from kern.boottime"
+    },
+    {
+      "id": "uptime_windows_cim",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"[math]::Round((New-TimeSpan -Start (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).TotalSeconds)\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["uptime"],
+      "timeout_secs": 10,
+      "description": "Windows system uptime in seconds from WMI"
+    },
+    {
+      "id": "net_linux_rx_bytes",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "cat /proc/net/dev",
+      "parser": {
+        "type": "lua",
+        "script": "local total = 0 for line in output:gmatch('[^\\n]+') do local iface, bytes = line:match('^%s*(%S+):%s+(%d+)') if iface and bytes and iface ~= 'lo' then total = total + tonumber(bytes) end end return total"
+      },
+      "requires": ["/proc/net/dev"],
+      "tags": ["net_rx_bytes"],
+      "timeout_secs": 5,
+      "description": "Linux total received bytes across all non-loopback interfaces"
+    },
+    {
+      "id": "net_linux_tx_bytes",
+      "category": "probe",
+      "os": "linux",
+      "priority": 1,
+      "command": "cat /proc/net/dev",
+      "parser": {
+        "type": "lua",
+        "script": "local total = 0 for line in output:gmatch('[^\\n]+') do local iface = line:match('^%s*(%S+):') if iface and iface ~= 'lo' then local fields = {} for n in line:gsub('^[^:]+:', ''):gmatch('%d+') do fields[#fields+1] = tonumber(n) end if #fields >= 9 then total = total + fields[9] end end end return total"
+      },
+      "requires": ["/proc/net/dev"],
+      "tags": ["net_tx_bytes"],
+      "timeout_secs": 5,
+      "description": "Linux total transmitted bytes across all non-loopback interfaces"
+    },
+    {
+      "id": "net_macos_rx_bytes",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "netstat -ibn",
+      "parser": {
+        "type": "lua",
+        "script": "local total = 0 local first = true for line in output:gmatch('[^\\n]+') do if first then first = false else local parts = {} for w in line:gmatch('%S+') do parts[#parts+1] = w end if #parts >= 7 and parts[1] ~= 'lo0' and parts[3] and parts[3]:match('<Link') then local rb = tonumber(parts[7]) if rb then total = total + rb end end end end return total"
+      },
+      "requires": [],
+      "tags": ["net_rx_bytes"],
+      "timeout_secs": 5,
+      "description": "macOS total received bytes from netstat -ibn (Link-layer rows only)"
+    },
+    {
+      "id": "net_macos_tx_bytes",
+      "category": "probe",
+      "os": "macos",
+      "priority": 1,
+      "command": "netstat -ibn",
+      "parser": {
+        "type": "lua",
+        "script": "local total = 0 local first = true for line in output:gmatch('[^\\n]+') do if first then first = false else local parts = {} for w in line:gmatch('%S+') do parts[#parts+1] = w end if #parts >= 10 and parts[1] ~= 'lo0' and parts[3] and parts[3]:match('<Link') then local tb = tonumber(parts[10]) if tb then total = total + tb end end end end return total"
+      },
+      "requires": [],
+      "tags": ["net_tx_bytes"],
+      "timeout_secs": 5,
+      "description": "macOS total transmitted bytes from netstat -ibn (Link-layer rows only)"
+    },
+    {
+      "id": "net_windows_rx_bytes",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-NetAdapterStatistics | Where-Object {(Get-NetAdapter -Name $_.Name -ErrorAction SilentlyContinue).Status -eq 'Up'} | Measure-Object -Property ReceivedBytes -Sum | Select-Object -ExpandProperty Sum\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["net_rx_bytes"],
+      "timeout_secs": 15,
+      "description": "Windows total received bytes across active adapters"
+    },
+    {
+      "id": "net_windows_tx_bytes",
+      "category": "probe",
+      "os": "windows",
+      "priority": 1,
+      "command": "powershell -NoProfile -Command \"Get-NetAdapterStatistics | Where-Object {(Get-NetAdapter -Name $_.Name -ErrorAction SilentlyContinue).Status -eq 'Up'} | Measure-Object -Property SentBytes -Sum | Select-Object -ExpandProperty Sum\"",
+      "parser": {
+        "type": "identity",
+        "transform": null
+      },
+      "requires": [],
+      "tags": ["net_tx_bytes"],
+      "timeout_secs": 15,
+      "description": "Windows total transmitted bytes across active adapters"
     },
     {
       "id": "gpu_util_nvidia",
