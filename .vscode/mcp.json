@@ -1,0 +1,19 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "megamem-token",
+      "description": "MegaMem bearer token (from /opt/forge/secrets or ~/.claude.json)",
+      "password": true
+    }
+  ],
+  "servers": {
+    "megamem": {
+      "type": "http",
+      "url": "http://192.168.1.131:3838/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${input:megamem-token}"
+      }
+    }
+  }
+}
