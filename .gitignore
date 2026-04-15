@@ -1,3 +1,6 @@
 binary/target/
 plugin/node_modules/
 plugin/dist/
+
+# Local git backups (e.g. .git.backup/ from previous recovery steps)
+.git.backup*
